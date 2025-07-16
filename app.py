@@ -1,17 +1,26 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import joblib
 from groq import Groq
 import os
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT")
-
 app = Flask(__name__)
 
-@app.route("/",methods=["GET","POST"])
-def index():
-    return(render_template("index.html"))
+# Get password from environment variable (e.g., set in Render.com dashboard)
+CORRECT_PASSWORD = os.environ.get("TRAVANA_PASSWORD")  # Use the key you defined in Render
 
-@app.route("/main",methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        if username == "MY" and password == CORRECT_PASSWORD:
+            return redirect(url_for("main"))
+        else:
+            return render_template("index.html", error="Incorrect username or password.")
+    return render_template("index.html")
+
+@app.route("/main", methods=["GET", "POST"])
 def main():
     q = request.form.get("q")
     # db
