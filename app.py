@@ -79,7 +79,7 @@ def webhook():
         messages=[
             {
                 "role": "user",
-                "content": q
+                "content": query
             }
         ]
     )
