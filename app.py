@@ -4,7 +4,7 @@ from groq import Groq
 
 import os
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT")
 
 app = Flask(__name__)
 
@@ -58,24 +58,11 @@ def deepseek_reply():
     )
     return(render_template("deepseek_reply.html",r=completion_ds.choices[0].message.content))
 
-@app.route("/dbs",methods=["GET","POST"])
-def dbs():
-    return(render_template("dbs.html"))
-
-@app.route("/prediction",methods=["GET","POST"])
-def prediction():
-    q = float(request.form.get("q"))
-    # load model
-    model = joblib.load("dbs.jl")
-    # make prediction
-    pred = model.predict([[q]])
-    return(render_template("prediction.html",r=pred))
-
 import requests
 
 @app.route("/telegram",methods=["GET","POST"])
 def telegram():
-    domain_url = 'https://dbs-fx.onrender.com'
+    domain_url = 'https://travana.onrender.com'
     # The following line is used to delete the existing webhook URL for the Telegram bot
     delete_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
     requests.post(delete_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
@@ -91,7 +78,7 @@ def telegram():
 
 @app.route("/stop_telegram",methods=["GET","POST"])
 def stop_telegram():
-    domain_url = 'https://dbs-fx.onrender.com'
+    domain_url = 'https://travana-83xv.onrender.com'
     # The following line is used to delete the existing webhook URL for the Telegram bot
     delete_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
     webhook_response = requests.post(delete_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
@@ -115,7 +102,7 @@ def webhook():
         # Pass the query to the Groq model
         client = Groq()
         completion_ds = client.chat.completions.create(
-            model="deepseek-r1-distill-llama-70b",
+            model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "user",
