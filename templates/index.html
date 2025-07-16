@@ -1,16 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static',
-        filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>DSAI Chatbot Login</title>
+    <script>
+        function validateForm(event) {
+            const password = document.getElementById('password').value;
+            const correctPassword = 'pwd'; // Replace with your desired password
+
+            if (password !== correctPassword) {
+                alert('Incorrect password. Please try again.');
+                event.preventDefault(); // Prevent form from submitting
+                return false;
+            }
+            return true;
+        }
+    </script>
 </head>
 <body>
     <div class="container">
-    <h2>Welcome to DSAI chatbot</h2>
-        <form action="/main" method="post">
+        <h2>Welcome to DSAI chatbot</h2>
+        <form action="/main" method="post" onsubmit="return validateForm(event)">
             <p>Please enter your name</p>
-            <input type="text" name="q">
+            <input type="text" name="q" required>
+
+            <p>Please enter the password</p>
+            <input type="password" id="password" required>
+
             <input type="submit" value="Enter">
         </form>
     </div>
 </body>
+</html>
