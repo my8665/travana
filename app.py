@@ -1,12 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for
 import joblib
-from groq import Groq
 import os
+import requests
+from groq import Groq
 
 app = Flask(__name__)
 
-# Get password from environment variable (e.g., set in Render.com dashboard)
-CORRECT_PASSWORD = os.environ.get("TRAVANA_PASSWORD")  # Use the key you defined in Render
+# Get password and other configuration from environment variables
+CORRECT_PASSWORD = os.environ.get("TRAVANA_PASSWORD")  # Password stored in environment variable
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")  # Telegram bot token
+DOMAIN_URL = os.environ.get("DOMAIN_URL")  # The base domain URL (e.g., Render.com URL)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")  # Groq API key
+
+# Initialize Groq client (ensure Groq SDK uses the API key if required)
+client = Groq(api_key=GROQ_API_KEY)
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -22,72 +29,62 @@ def login():
 
 @app.route("/main", methods=["GET", "POST"])
 def main():
-    q = request.form.get("q")
-    # db
-    return(render_template("main.html"))
+    # Ensure 'q' is available only in POST requests
+    q = request.form.get("q") if request.method == "POST" else None
+    return render_template("main.html", q=q)
 
-import requests
-
-@app.route("/telegram",methods=["GET","POST"])
+@app.route("/telegram", methods=["GET", "POST"])
 def telegram():
-    domain_url = 'https://travana-83xv.onrender.com'
-    # The following line is used to delete the existing webhook URL for the Telegram bot
+    # Delete the existing webhook URL for the Telegram bot
     delete_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
-    requests.post(delete_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
-    # Set the webhook URL for the Telegram bot
-    set_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url={domain_url}/webhook"
-    webhook_response = requests.post(set_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
+    requests.post(delete_webhook_url, json={"url": DOMAIN_URL, "drop_pending_updates": True})
+
+    # Set the new webhook URL for the Telegram bot
+    set_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url={DOMAIN_URL}/webhook"
+    webhook_response = requests.post(set_webhook_url)
+
     if webhook_response.status_code == 200:
-        # set status message
         status = "The telegram bot is running."
     else:
         status = "Failed to start the telegram bot."
-    return(render_template("telegram.html", r=status))
 
-@app.route("/stop_telegram",methods=["GET","POST"])
+    return render_template("telegram.html", r=status)
+
+@app.route("/stop_telegram", methods=["GET", "POST"])
 def stop_telegram():
-    domain_url = 'https://travana-83xv.onrender.com'
-    # The following line is used to delete the existing webhook URL for the Telegram bot
+    # Delete the existing webhook URL for the Telegram bot
     delete_webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
-    webhook_response = requests.post(delete_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
-    # Set the webhook URL for the Telegram bot
+    webhook_response = requests.post(delete_webhook_url, json={"url": DOMAIN_URL, "drop_pending_updates": True})
+
     if webhook_response.status_code == 200:
-        # set status message
-        status = "The telegram bot has stop."
+        status = "The telegram bot has stopped."
     else:
         status = "Failed to stop the telegram bot."
-    return(render_template("stop_telegram.html", r=status))
 
-@app.route("/webhook",methods=["GET","POST"])
+    return render_template("stop_telegram.html", r=status)
+
+@app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     # This endpoint will be called by Telegram when a new message is received
     update = request.get_json()
+
     if "message" in update and "text" in update["message"]:
         # Extract the chat ID and message text from the update
         chat_id = update["message"]["chat"]["id"]
         query = update["message"]["text"]
 
-        # Pass the query to the Groq model
-        client = Groq()
+        # Pass the query to the Groq model for a response
         completion_ds = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=[
-                {
-                    "role": "user",
-                    "content": query
-                }
-            ]
+            messages=[{"role": "user", "content": query}]
         )
         response_message = completion_ds.choices[0].message.content
 
         # Send the response back to the Telegram chat
         send_message_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        requests.post(send_message_url, json={
-            "chat_id": chat_id,
-            "text": response_message
-        })
-    return('ok', 200)
+        requests.post(send_message_url, json={"chat_id": chat_id, "text": response_message})
+
+    return ('ok', 200)
 
 if __name__ == "__main__":
-    app.run()
-
+    app.run(debug=True)
